@@ -1,55 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { makeStyles } from '@material-ui/styles';
-import {Link} from 'react-router-dom';
-import Paper from '@material-ui/core/Paper';
-import Card from '@material-ui/core/Card';
-import Tooltip from '@material-ui/core/Tooltip';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Typography from '@material-ui/core/Typography';
-import Switch from '@material-ui/core/Switch';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-import Divider from '@material-ui/core/Divider';
-import TextField from '@material-ui/core/TextField';
-import Button from '@material-ui/core/Button';
-import Tabs from '@material-ui/core/Tabs';
-import Tab from '@material-ui/core/Tab';
-import Grid from '@material-ui/core/Grid';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
-import ListItemAvatar from '@material-ui/core/ListItemAvatar';
-import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
-import IconButton from '@material-ui/core/IconButton';
-import Avatar from '@material-ui/core/Avatar';
-import Zoom from '@material-ui/core/Zoom';
-import { useAlert } from "react-alert";
-
-import { Dialog, DialogTitle, DialogActions, DialogContent } from '@material-ui/core';
 import { useTheme } from '@material-ui/core/styles';
+import {Link} from 'react-router-dom';
+
+import {Paper, Card, Tooltip, FormControlLabel, Typography, Switch, Select, MenuItem, Divider, TextField, Button, Tabs, Tab, Grid, List, ListItem, ListItemText, ListItemAvatar, ListItemSecondaryAction, IconButton, Avatar, Zoom,  Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress } from '@material-ui/core';
+
+import {Edit as EditIcon, FileCopy as FileCopyIcon, Publish as PublishIcon, SelectAll as SelectAllIcon, OpenInNew as OpenInNewIcon, CloudDownload as CloudDownloadIcon, Description as DescriptionIcon, Polymer as PolymerIcon, CheckCircle as CheckCircleIcon, Close as CloseIcon, Apps as AppsIcon, Image as ImageIcon, Delete as DeleteIcon, Cached as CachedIcon, AccessibilityNew as AccessibilityNewIcon, Lock as LockIcon, Eco as EcoIcon, Schedule as ScheduleIcon, Cloud as CloudIcon, Business as BusinessIcon} from '@material-ui/icons';
+
+import { useAlert } from "react-alert";
+import Dropzone from '../components/Dropzone';
 import HandlePayment from './HandlePayment'
 import OrgHeader from '../components/OrgHeader'
-
-import EditIcon from '@material-ui/icons/Edit';
-import SelectAllIcon from '@material-ui/icons/SelectAll';
-import OpenInNewIcon from '@material-ui/icons/OpenInNew';
-import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
-import DescriptionIcon from '@material-ui/icons/Description';
-import PolymerIcon from '@material-ui/icons/Polymer';
-import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import CloseIcon from '@material-ui/icons/Close';
-import AppsIcon from '@material-ui/icons/Apps';
-import ImageIcon from '@material-ui/icons/Image';
-import DeleteIcon from '@material-ui/icons/Delete';
-import CachedIcon from '@material-ui/icons/Cached';
-import AccessibilityNewIcon from '@material-ui/icons/AccessibilityNew';
-import LockIcon from '@material-ui/icons/Lock';
-import EcoIcon from '@material-ui/icons/Eco';
-import ScheduleIcon from '@material-ui/icons/Schedule';
-import CloudIcon from '@material-ui/icons/Cloud';
-import BusinessIcon from '@material-ui/icons/Business';
-
 
 const useStyles = makeStyles({
 	notchedOutline: {
@@ -61,6 +23,7 @@ const Admin = (props) => {
 	const { globalUrl, userdata } = props;
 
 	var upload = ""
+	var to_be_copied = ""
 	const theme = useTheme();
 	const classes = useStyles();
 	const [firstRequest, setFirstRequest] = React.useState(true);
@@ -92,6 +55,14 @@ const Admin = (props) => {
 	const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false)
 	const [authenticationFields, setAuthenticationFields] = React.useState([])
 	const [showArchived, setShowArchived] = React.useState(false)
+	const [isDropzone, setIsDropzone] = React.useState(false);
+
+	useEffect(() => {
+		if (isDropzone) {
+			//redirectOpenApi();
+			setIsDropzone(false);
+		}
+  }, [isDropzone]);
 
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 	const getApps = () => {
@@ -218,6 +189,45 @@ const Admin = (props) => {
 			.catch(error => {
 				console.log("Error in userdata: ", error)
 			});
+	}
+
+	const handleStopOrgSync = (org_id) => {
+		if (org_id === undefined || org_id === null) {
+			alert.error("Couldn't get org "+org_id)
+			return 
+		}
+
+		const data = {}
+
+		const url = globalUrl + '/api/v1/orgs/' + org_id + "/stop_sync";
+		fetch(url, {
+			mode: 'cors',
+			method: 'POST',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+		.then(response => {
+			if (response.status === 200) {
+				console.log("Cloud sync success?")
+				alert.success("Successfully stopped cloud sync")
+			} else {
+				console.log("Cloud sync fail?")
+				alert.error("Failed stopping sync. Try again, and contact support if this persists.")
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			handleGetOrg(org_id) 
+		})
+		.catch(error => {
+			alert.error("Err: " + error.toString())
+		})
 	}
 
 	const enableCloudSync = (apikey, organization, disableSync) => {
@@ -377,7 +387,9 @@ const Admin = (props) => {
 
 	const deleteUser = (data) => {
 		// Just use this one?
-		const url = globalUrl + '/api/v1/users/' + data.id
+		const userId = isCloud ? data.username : data.id 
+		
+		const url = globalUrl + '/api/v1/users/' + userId
 		fetch(url, {
 			method: 'DELETE',
 			credentials: "include",
@@ -406,6 +418,11 @@ const Admin = (props) => {
 	}
 
 	const handleGetOrg = (orgId) => {
+		if (orgId.length === 0) {
+			alert.error("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.")
+			return 
+		}
+
 		// Just use this one?
 		var baseurl = globalUrl
 		const url = baseurl + '/api/v1/orgs/'+orgId
@@ -459,11 +476,13 @@ const Admin = (props) => {
 
 	const submitUser = (data) => {
 		console.log("INPUT: ", data)
+		setLoginInfo("")
 
 		// Just use this one?
 		var data = { "username": data.Username, "password": data.Password }
 		var baseurl = globalUrl
 		const url = baseurl + '/api/v1/users/register';
+
 		fetch(url, {
 			method: 'POST',
 			credentials: "include",
@@ -475,7 +494,7 @@ const Admin = (props) => {
 			.then(response =>
 				response.json().then(responseJson => {
 					if (responseJson["success"] === false) {
-						setLoginInfo("Error in input: " + responseJson.reason)
+						setLoginInfo("Error: " + responseJson.reason)
 					} else {
 						setLoginInfo("")
 						setModalOpen(false)
@@ -644,6 +663,67 @@ const Admin = (props) => {
 			.catch(error => {
 				console.log("Error in userdata: ", error)
 			});
+	}
+
+	const handleFileUpload = (file_id, file) => {
+		//console.log("FILE: ", file_id, file)
+		fetch(`${globalUrl}/api/v1/files/${file_id}/upload`, {
+			method: 'POST',
+			credentials: "include",
+			body: file,
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!")
+				return
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			//console.log("RESPONSE: ", responseJson)
+			//setFiles(responseJson)
+		})
+		.catch(error => {
+			//alert.error(error.toString())
+		});
+	}
+
+	const handleCreateFile = (filename, file) => {
+		const data = {
+			"filename": filename,
+			"org_id": selectedOrganization.id,
+			"workflow_id": "global",
+		}
+
+		fetch(globalUrl + "/api/v1/files/create", {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+			body: JSON.stringify(data),
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!")
+				return
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			//console.log("RESP: ", responseJson)
+			if (responseJson.success) {
+				handleFileUpload(responseJson.id, file) 
+			} else {
+				alert.error("Failed to upload file ", filename)
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
 	}
 
 	const getFiles = () => {
@@ -836,7 +916,8 @@ const Admin = (props) => {
 		})
 			.then((response) => {
 				if (response.status !== 200) {
-					window.location.pathname = "/workflows"
+					// Ahh, this happens because they're not admin
+					// window.location.pathname = "/workflows"
 					return
 				}
 
@@ -880,11 +961,11 @@ const Admin = (props) => {
 		} else if (newValue === 2) {
 			getAppAuthentication()
 		} else if (newValue === 3) {
-			getEnvironments()
+			getFiles()
 		} else if (newValue === 4) {
 			getSchedules()
 		} else if (newValue === 5) {
-			getFiles()
+			getEnvironments()
 		} else if (newValue === 6) {
 			getOrgs() 
 		}
@@ -998,7 +1079,8 @@ const Admin = (props) => {
 
 
 
-	const generateApikey = (userId) => {
+	const generateApikey = (user) => {
+		const userId = isCloud ? user.username : user.id
 		const data = { "user_id": userId }
 
 		fetch(globalUrl + "/api/v1/generateapikey", {
@@ -1048,6 +1130,7 @@ const Admin = (props) => {
 			<DialogTitle><span style={{ color: "white" }}>Edit authentication for {selectedAuthentication.app.name} ({selectedAuthentication.label})</span></DialogTitle>
 			<DialogContent>
 				{selectedAuthentication.fields.map((data, index) => {
+					console.log("DATA: ", data, selectedAuthentication)
 					return (
 						<div key={index}>
 							<Typography style={{marginBottom: 0, marginTop: 10}}>{data.key}</Typography>
@@ -1124,11 +1207,11 @@ const Admin = (props) => {
 				},
 			}}
 		>
-			<DialogTitle><span style={{ color: "white" }}><EditIcon /></span></DialogTitle>
+			<DialogTitle><span style={{ color: "white" }}><EditIcon /> Edit user</span></DialogTitle>
 			<DialogContent>
 				<div style={{ display: "flex" }}>
 					<TextField
-						style={{ marginTop: 0, backgroundColor: theme.palette.inputColor, flex: 3 }}
+						style={{ marginTop: 0, backgroundColor: theme.palette.inputColor, flex: 3 , marginRight: 10,}}
 						InputProps={{
 							style: {
 								height: 50,
@@ -1168,7 +1251,7 @@ const Admin = (props) => {
 					style={{}}
 					variant="outlined"
 					color="primary"
-					onClick={() => generateApikey(selectedUser.id)}
+					onClick={() => generateApikey(selectedUser)}
 				>
 					Get new API key
 				</Button>
@@ -1324,14 +1407,14 @@ const Admin = (props) => {
 
 	const cancelSubscriptions = (subscription_id) => {
 		console.log(selectedOrganization)
+		const orgId = selectedOrganization.id
 		const data = {
 			"subscription_id": subscription_id,
 			"action": "cancel",
 			"org_id": selectedOrganization.id,
 		}
 
-
-		const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+		const url = globalUrl + `/api/v1/orgs/${orgId}`;
 		fetch(url, {
 			mode: 'cors',
 			method: 'POST',
@@ -1366,7 +1449,7 @@ const Admin = (props) => {
 	}
 
 	const organizationView = curTab === 0 && selectedOrganization.id !== undefined ?
-		<div>
+		<div style={{position: "relative"}}>
 			<div style={{ marginTop: 20, marginBottom: 20, }}>
 				<h2 style={{ display: "inline", }}>Organization overview</h2>
 				<span style={{ marginLeft: 25 }}>
@@ -1374,12 +1457,43 @@ const Admin = (props) => {
 				</span>
 			</div>
 				{selectedOrganization.id === undefined ? 
-					<div style={{height: 250}}/>
-					: 
+					<div style={{paddingTop: 250, width: 250, margin: "auto", textAlign: "center"}}>
+						<CircularProgress />
+						<Typography>
+							Loading Organization 
+						</Typography>
+					</div>
+					:
 					<div>
+						<Tooltip title={"Copy Organization ID"} style={{}} aria-label={"Copy orgid"}>
+							<IconButton style={{top: -10, right: 0, position: "absolute",}} onClick={() => {
+								const elementName = "copy_element_shuffle"
+								const org_id = selectedOrganization.id
+								var copyText = document.getElementById(elementName);
+								if (copyText !== null && copyText !== undefined) {
+									navigator.clipboard.writeText(org_id)
+									copyText.select();
+									copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+								/* Copy the text inside the text field */
+								document.execCommand("copy");
+
+								alert.info(org_id + " copied to clipboard")	
+							}
+						}}>
+							<FileCopyIcon style={{color: "rgba(255,255,255,0.8)"}}/>
+						</IconButton>
+					</Tooltip>
 						{selectedOrganization.name.length > 0 ?
 							<OrgHeader setSelectedOrganization={setSelectedOrganization} globalUrl={globalUrl} selectedOrganization={selectedOrganization}/>
-						: null}
+						: 
+						<div style={{paddingTop: 250, width: 250, margin: "auto", textAlign: "center"}}>
+							<CircularProgress />
+							<Typography>
+								Loading Organization 
+							</Typography>
+						</div>
+					}
 					<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
 						<Typography variant="h6" style={{marginBottom: "10px", color: "white"}}>Cloud syncronization</Typography>
 							What does <a href="https://shuffler.io/docs/organizations#cloud_sync" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>cloud sync</a> do? Cloud syncronization is a way of getting more out of Shuffle. Shuffle will <b>ALWAYS</b> make every option open source, but features relying on other users can't be done without a collaborative approach.
@@ -1400,27 +1514,41 @@ const Admin = (props) => {
 								<Typography style={{whiteSpace: "nowrap", marginTop: 25, marginRight: 10}}>
 									Your Apikey 
 								</Typography>
-								<TextField
-									color="primary"
-									style={{backgroundColor: theme.palette.inputColor, }}
-									InputProps={{
-										style: {
-											height: "50px",
-											color: "white",
-											fontSize: "1em",
-										},
-									}}
-									required
-									fullWidth={true}
-									disabled={true}
-									autoComplete="cloud apikey"
-									id="apikey_field"
-									margin="normal"
-									placeholder="Cloud Apikey"
-									variant="outlined"
-									defaultValue={userSettings.apikey}
-								/>
-							</div>
+								<div style={{display: "flex"}}>
+									<TextField
+										color="primary"
+										style={{backgroundColor: theme.palette.inputColor, }}
+										InputProps={{
+											style: {
+												height: "50px",
+												color: "white",
+												fontSize: "1em",
+											},
+										}}
+										required
+										fullWidth={true}
+										disabled={true}
+										autoComplete="cloud apikey"
+										id="apikey_field"
+										margin="normal"
+										placeholder="Cloud Apikey"
+										variant="outlined"
+										defaultValue={userSettings.apikey}
+									/>
+									{selectedOrganization.cloud_sync_active ? 
+										<Button
+											style={{ width: 150, height: 50, marginLeft: 10, marginTop: 17, }}
+											variant="contained"
+											color="primary"
+											onClick={() => {
+												handleStopOrgSync(selectedOrganization.id)
+											}}
+										>
+											Stop Sync	
+										</Button>
+									: null}
+								</div>
+								</div>
 						</div>
 					:
 					<div>
@@ -1539,7 +1667,7 @@ const Admin = (props) => {
 				}
 
 					<div style={{backgroundColor: "#1f2023", paddingTop: 25,}}>
-						<HandlePayment stripeKey={props.stripeKey} userdata={userdata} globalUrl={globalUrl} {...props} />
+						<HandlePayment theme={theme} stripeKey={props.stripeKey} userdata={userdata} globalUrl={globalUrl} {...props} />
 					</div>
 			</div>
 		: null
@@ -1656,7 +1784,6 @@ const Admin = (props) => {
 			</div>
 			<div />
 			<Button
-				disabled={isCloud}
 				style={{}}
 				variant="contained"
 				color="primary"
@@ -1664,17 +1791,25 @@ const Admin = (props) => {
 			>
 				Add user
 			</Button>
+			<Button 
+				style={{marginLeft: 5, marginRight: 15, }} 
+				variant="contained"
+				color="primary"
+				onClick={() => getUsers()}
+			> 
+				<CachedIcon />
+			</Button>
 			<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
 			<List>
 				<ListItem>
 					<ListItemText
 						primary="Username"
-						style={{ minWidth: 200, maxWidth: 200 }}
+						style={{ minWidth: 300, maxWidth: 300}}
 					/>
 					
 					<ListItemText
 						primary="API key"
-						style={{ minWidth: 350, maxWidth: 350, overflow: "hidden" }}
+						style={{ minWidth: 100, maxWidth: 100, overflow: "hidden" }}
 					/>
 					
 					<ListItemText
@@ -1690,7 +1825,7 @@ const Admin = (props) => {
 						style={{ minWidth: 180, maxWidth: 180 }}
 					/>
 				</ListItem>
-				{users === undefined ? null : users.map((data, index) => {
+				{users === undefined || users === null ? null : users.map((data, index) => {
 					var bgColor = "#27292d"
 					if (index % 2 === 0) {
 						bgColor = "#1f2023"
@@ -1700,64 +1835,86 @@ const Admin = (props) => {
 						<ListItem key={index} style={{backgroundColor: bgColor}}>
 							<ListItemText
 								primary={data.username}
-								style={{ minWidth: 200, maxWidth: 200 }}
+								style={{ minWidth: 300, maxWidth: 300, overflow: "hidden",}}
 							/>
 							
 							<ListItemText
-								primary={data.apikey === undefined || data.apikey.length === 0 ? "" : data.apikey}
-								style={{ maxWidth: 350, minWidth: 350, }}
-							/>
+								style={{ maxWidth: 100, minWidth: 100, }}
+								primary={data.apikey === undefined || data.apikey.length === 0 ? "" : 
+									<Tooltip title={"Copy Api Key"} style={{}} aria-label={"Copy APIkey"}>
+										<IconButton style={{}} onClick={() => {
+												const elementName = "copy_element_shuffle"
+												var copyText = document.getElementById(elementName);
+												if (copyText !== null && copyText !== undefined) {
+													navigator.clipboard.writeText(data.apikey)
+													copyText.select();
+													copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+												/* Copy the text inside the text field */
+												document.execCommand("copy");
+
+												alert.info("Apikey copied to clipboard")	
+											}
+										}}>
+										<FileCopyIcon style={{color: "rgba(255,255,255,0.8)"}}/>
+									</IconButton>
+								</Tooltip>
+							}/>
 							
 							<ListItemText
 								primary=
-								{<Select
-									SelectDisplayProps={{
-									style: {
-										marginLeft: 10,
+									{<Select
+										SelectDisplayProps={{
+										style: {
+											marginLeft: 10,
+										}
+									}}
+									value={data.role}
+									fullWidth
+									onChange={(e) => {
+									console.log("VALUE: ", e.target.value)
+
+									if (isCloud) {	
+										setUser(data.username, "role", e.target.value)
+									} else {
+										setUser(data.id, "role", e.target.value)
 									}
 								}}
-								value={data.role}
-								fullWidth
-								onChange={(e) => {
-								console.log("VALUE: ", e.target.value)
-								setUser(data.id, "role", e.target.value)
-							}}
 										style={{ backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px" }}
-										>
-							<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"admin"}>
-								Admin
-										</MenuItem>
-							<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"user"}>
-								User
-										</MenuItem>
-									</Select>}
-								style = {{ minWidth: 150, maxWidth: 150}}
+									>
+									<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"admin"}>
+										Admin
+									</MenuItem>
+									<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"user"}>
+										User
+									</MenuItem>
+								</Select>
+								}
+								style ={{ minWidth: 135, maxWidth: 135, marginRight: 15,}}
 							/>
 							<ListItemText
 					primary={data.active ? "True" : "False"}
 					style={{ minWidth: 180, maxWidth: 180 }}
 				/>
 				<ListItemText style={{ display: "flex" }}>
-					<Button
-						style={{}}
-						variant="outlined"
-						color="primary"
+					<IconButton
 						onClick={() => {
 							setSelectedUserModalOpen(true)
 							setSelectedUser(data)
 						}}
 					>
-						Edit user
-					</Button>
+						<EditIcon color="primary"/>
+					</IconButton>
 					<Button
-						style={{}}
+						onClick={() => {
+							generateApikey(data)
+						}}
 						variant="outlined"
 						color="primary"
-						onClick={() => generateApikey(data.id)}
 					>
-						Get new API key
+						New apikey 
 					</Button>
-					</ListItemText>
+				</ListItemText>
 				</ListItem>
 					)
 				})}
@@ -1765,12 +1922,72 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const filesView = curTab === 5 ?
+	const uploadFiles = (files) => {
+		for (var key in files) {
+			try {
+				const filename = files[key].name
+				var filedata = new FormData()
+				filedata.append('shuffle_file', files[key])
+
+				if (typeof(files[key]) === "object") {
+					handleCreateFile(filename, filedata)
+				}
+
+				/*
+				reader.addEventListener('load', (e) => {
+					var data = e.target.result;
+					setIsDropzone(false)
+					console.log(filename)	
+					console.log(data)
+					console.log(files[key])
+				})
+				reader.readAsText(files[key])
+				*/
+			} catch (e) {
+				console.log("Error in dropzone: ", e)
+			}
+		}
+
+		getFiles() 
+	}
+
+	const uploadFile = (e) => {
+		const isDropzone = e.dataTransfer === undefined ? false : e.dataTransfer.files.length > 0;
+		const files = isDropzone ? e.dataTransfer.files : e.target.files;
+		
+    //const reader = new FileReader();
+		//alert.info("Starting fileupload")
+		uploadFiles(files)
+  }
+
+	const filesView = curTab === 3 ?
+		<Dropzone style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto", padding: 20 }} onDrop={uploadFile}>
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Files</h2>
 				<span style={{marginLeft: 25}}>Files from Workflows. <a target="_blank" href="https://shuffler.io/docs/organizations#files" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a></span>
 			</div>
+			<Button color="primary" variant="contained" onClick={() => {
+				upload.click()	
+			}}>
+				
+				<PublishIcon /> Upload files
+			</Button>
+			<input hidden type="file" multiple ref={(ref) => upload = ref} onChange={(event) => {
+				//const file = event.target.value
+				//const fileObject = URL.createObjectURL(actualFile)
+				//setFile(fileObject)
+				//const files = event.target.files[0]
+				uploadFiles(event.target.files) 
+			}} />
+			<Button 
+				style={{marginLeft: 5, marginRight: 15, }} 
+				variant="contained"
+				color="primary"
+				onClick={() => getFiles()}
+			> 
+				<CachedIcon />
+			</Button>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
@@ -1792,7 +2009,7 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Status"
-						style={{minWidth: 75, maxWidth: 75}}
+						style={{minWidth: 75, maxWidth: 75, marginLeft: 10,}}
 					/>
 					<ListItemText
 						primary="Filesize"
@@ -1800,6 +2017,9 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Actions"
+					/>
+					<ListItemText
+						primary="File ID"
 					/>
 				</ListItem>
 				{files === undefined || files === null ? null : files.map((file, index) => {
@@ -1815,18 +2035,24 @@ const Admin = (props) => {
 								primary={new Date(file.created_at*1000).toISOString()}
 							/>
 							<ListItemText
-								style={{maxWidth: 150, minWidth: 150}}
+								style={{maxWidth: 150, minWidth: 150, overflow: "hidden",}}
 								primary={file.filename}
 							/>
 							<ListItemText
 								primary=
-									<Tooltip title={"Go to workflow"} style={{}} aria-label={"Download"}>
-										<a style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${file.workflow_id}`} target="_blank">
-											<IconButton>
-												<OpenInNewIcon style={{color: "white"}} />
+										{file.workflow_id === "global" ? 
+											<IconButton disabled={file.workflow_id === "global"}>
+												<OpenInNewIcon style={{color: file.workflow_id !== "global" ? "white" : "grey",}} />
 											</IconButton>
-										</a>
-									</Tooltip>
+										: 
+											<Tooltip title={"Go to workflow"} style={{}} aria-label={"Download"}>
+												<a style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${file.workflow_id}`} target="_blank">
+													<IconButton disabled={file.workflow_id === "global"}>
+														<OpenInNewIcon style={{color: file.workflow_id !== "global" ? "white" : "grey",}} />
+													</IconButton>
+												</a>
+											</Tooltip>
+										}
 								style={{minWidth: 100, maxWidth: 100, overflow: "hidden"}}
 							/>
 							<ListItemText
@@ -1835,7 +2061,7 @@ const Admin = (props) => {
 							/>
 							<ListItemText
 								primary={file.status}
-								style={{minWidth: 75, maxWidth: 75, overflow: "hidden"}}
+								style={{minWidth: 75, maxWidth: 75, overflow: "hidden", marginLeft: 10,}}
 							/>
 							<ListItemText
 								primary={file.filesize}
@@ -1844,10 +2070,10 @@ const Admin = (props) => {
 							<ListItemText
 								primary=
 									<Tooltip title={"Download file"} style={{}} aria-label={"Download"}>
-										<IconButton onClick={() => {
+										<IconButton disabled={file.status !== "active"} onClick={() => {
 											downloadFile(file)
 										}}>
-											<CloudDownloadIcon style={{color: "white"}} />
+											<CloudDownloadIcon style={{color: file.status === "active" ? "white" : "grey",}} />
 										</IconButton>
 									</Tooltip>
 								style={{minWidth: 75, maxWidth: 75, overflow: "hidden"}}
@@ -1865,11 +2091,31 @@ const Admin = (props) => {
 								</Button>
 							</ListItemText>
 							*/}
+							<ListItemText
+								primary=
+									<IconButton onClick={() => {
+										const elementName = "copy_element_shuffle"
+  									var copyText = document.getElementById(elementName);
+										if (copyText !== null && copyText !== undefined) {
+											navigator.clipboard.writeText(file.id)
+											copyText.select();
+											copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+											/* Copy the text inside the text field */
+											document.execCommand("copy");
+
+											alert.info(file.id + " copied to clipboard")	
+										}
+									}}>
+										<FileCopyIcon style={{color: "white"}}/>
+									</IconButton>
+							/>
 						</ListItem>
 					)
 				})}
 			</List>
 		</div>
+		</Dropzone>
 		: null
 
 	const schedulesView = curTab === 4 ?
@@ -2052,7 +2298,7 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="App Name"
-						style={{minWidth: 150, maxWidth: 150}}
+						style={{minWidth: 175, maxWidth: 175, marginLeft: 10,}}
 					/>
 					<ListItemText
 						primary="Ready"
@@ -2074,7 +2320,7 @@ const Admin = (props) => {
 						primary="Actions"
 					/>
 				</ListItem>
-				{authentication === undefined ? null : authentication.map((data, index) => {
+				{authentication === undefined || authentication === null ? null : authentication.map((data, index) => {
 					var bgColor = "#27292d"
 					if (index % 2 === 0) {
 						bgColor = "#1f2023"
@@ -2088,15 +2334,15 @@ const Admin = (props) => {
 							/>
 							<ListItemText
 								primary={data.label}
-								style={{minWidth: 225, maxWidth: 225}}
+								style={{minWidth: 225, maxWidth: 225, overflow: "hidden",}}
 							/>
 							<ListItemText
 								primary={data.app.name}
-								style={{minWidth: 150, maxWidth: 150}}
+								style={{minWidth: 175, maxWidth: 175, marginLeft: 10}}
 							/>
 							<ListItemText
 								primary={data.defined === false ? "No" : "Yes"}
-								style={{minWidth: 100, maxWidth: 100}}
+								style={{minWidth: 100, maxWidth: 100, marginLeft: 10,}}
 							/>
 							<ListItemText
 								primary={data.workflow_count === null ? 0 : data.workflow_count}
@@ -2158,7 +2404,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const environmentView = curTab === 3 ?
+	const environmentView = curTab === 5 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Environments</h2>
@@ -2392,7 +2638,7 @@ const Admin = (props) => {
 
 	const iconStyle = {marginRight: 10}
 	const data = 
-		<div style={{width: 1366, margin: "auto", overflowX: "hidden",}}>
+		<div style={{width: 1366, margin: "auto", overflowX: "hidden", marginTop: 25,}}>
 			<Paper style={paperStyle}>
 				<Tabs
 					value={curTab}
@@ -2402,10 +2648,10 @@ const Admin = (props) => {
 				>
 					<Tab label=<span><BusinessIcon style={iconStyle} /> Organization</span>/>
 					<Tab label=<span><AccessibilityNewIcon style={iconStyle} />Users</span> />
-					{isCloud ? null : <Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>}
+					<Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>
+					<Tab label=<span><DescriptionIcon style={iconStyle} />Files</span> />
+					<Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />
 					{isCloud ? null : <Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>}
-					{isCloud ? null : <Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />}
-					{isCloud ? null : <Tab label=<span><DescriptionIcon style={iconStyle} />Files</span> />}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
 					{window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null}
@@ -2432,6 +2678,11 @@ const Admin = (props) => {
 			{editUserModal}
 			{editAuthenticationModal}
 			{data}
+			<TextField
+				id="copy_element_shuffle"
+				value={to_be_copied}
+				style={{display: "none", }}
+			/>
 		</div>
 	)
 }

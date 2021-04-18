@@ -2,33 +2,13 @@ import React, {useState, useEffect} from 'react';
 import { makeStyles } from '@material-ui/styles';
 import {BrowserView, MobileView} from "react-device-detect";
 
+import {Paper, Typography, FormControlLabel, Button, Divider, Select, MenuItem, FormControl, Switch, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Breadcrumbs, CircularProgress, Chip} from '@material-ui/core';
+import {CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
+
+
 import {Link} from 'react-router-dom';
-import Paper from '@material-ui/core/Paper';
-import Typography from '@material-ui/core/Typography';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Button from '@material-ui/core/Button';
-import Divider from '@material-ui/core/Divider';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-import FormControl from '@material-ui/core/FormControl';
-import Switch from '@material-ui/core/Switch';
-import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogActions from '@material-ui/core/DialogActions';
-import TextField from '@material-ui/core/TextField';
-import Tooltip from '@material-ui/core/Tooltip';
-import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import AttachFileIcon from '@material-ui/icons/AttachFile';
-import Breadcrumbs from '@material-ui/core/Breadcrumbs';
-import AppsIcon from '@material-ui/icons/Apps';
-import CircularProgress from '@material-ui/core/CircularProgress';
-
-import Chip from '@material-ui/core/Chip';
-import ChipInput from 'material-ui-chip-input'
-
 import YAML from 'yaml'
-import ErrorOutline from '@material-ui/icons/ErrorOutline';
+import ChipInput from 'material-ui-chip-input'
 import { useAlert } from "react-alert";
 import words from "shellwords"
 
@@ -215,7 +195,7 @@ const AppCreator = (props) => {
 	const alert = useAlert()
 
 	var upload = ""
-	const increaseAmount = 30
+	const increaseAmount = 50
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
 	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", ]
@@ -339,6 +319,8 @@ const AppCreator = (props) => {
 	const checkQuery = () => {
 		var urlParams = new URLSearchParams(window.location.search)
 		if (!urlParams.has("id")) {
+			setActionAmount(0)
+
   		setIsAppLoaded(true)
 			return	
 		}
@@ -360,12 +342,10 @@ const AppCreator = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			console.log("THE BODY IS HERE")
   		setIsAppLoaded(true)
 			if (!responseJson.success) {
 				alert.error("Failed to verify")
 			} else{
-				console.log("HMM 2")
 				var jsonvalid = false 
 				var tmpvalue = ""
 				try {
@@ -464,6 +444,10 @@ const AppCreator = (props) => {
 			}
 
 			if (data.info["x-categories"] !== undefined  && data.info["x-categories"].length > 0) {
+				if (typeof(data.info["x-categories"]) == "array") {
+				} else {
+
+				}
 				setNewWorkflowCategories(data.info["x-categories"])
 			}
 		}
@@ -585,7 +569,7 @@ const AppCreator = (props) => {
 								}
 							}
 
-							console.log(methodvalue["requestBody"]["content"])
+							//console.log(methodvalue["requestBody"]["content"])
 							if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
 								if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== null) {
 									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
@@ -942,6 +926,7 @@ const AppCreator = (props) => {
 					//console.log(queryitem)
 				}
 			} 
+			//data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 
 			if (item.paths.length > 0) {
 				for (querykey in item.paths) {
@@ -1250,6 +1235,11 @@ const AppCreator = (props) => {
 		newAction.errors.push("Can't have the same name")
 
 		actions.push(newAction)
+
+		if (actions.length > actionAmount) { 
+			setActionAmount(actions.length)
+		}
+
 		setActions(actions)
 		setUpdate(Math.random())
 	}
@@ -1270,6 +1260,7 @@ const AppCreator = (props) => {
 		})
 
 		setActions(actions)
+		setActionAmount(actionAmount-1)
 		setUpdate(Math.random())
 	}
 
@@ -1313,13 +1304,13 @@ const AppCreator = (props) => {
 					id: 'outlined-age-simple',
 				}}
 			>
-				{apikeySelection.map(data => {
+				{apikeySelection.map((data, index) => {
 					if (data === undefined) {
 						return null
 					}
 
 					return (
-						<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 							{data}
 						</MenuItem>
 					)}
@@ -1337,7 +1328,7 @@ const AppCreator = (props) => {
 				const requiredColor = data.required === true ? "green" : "red"
 				//const required = data.required === true ? <div style={{color: "green", cursor: "pointer"}}>{data.required.toString()}</div> : <div onClick={() => {flipRequired(index)}} style={{display: "inline", color: "red", cursor: "pointer"}}>{data.required.toString()}</div>
 				return (
-					<Paper style={actionListStyle}>
+					<Paper key={index} style={actionListStyle}>
 						<div style={{marginLeft: "5px", width: "100%"}}>
 							<div style={{cursor: "pointer"}} onClick={() => {flipRequired(index)}}>
 								Required: <div style={{display: "inline", color: requiredColor}}>{data.required.toString()}</div>
@@ -1349,7 +1340,9 @@ const AppCreator = (props) => {
 								placeholder={'Query name'}
 								helperText={<span style={{color:"white", marginBottom: "2px",}}>Click required switch</span>}
 								onBlur={(e) => {
-									urlPathQueries[index].name = e.target.value
+									console.log("IN BLUR: ", e.target.value)
+									urlPathQueries[index].name = e.target.value.replaceAll("=", "")
+
 									setUrlPathQueries(urlPathQueries)
 								}}
 								InputProps={{
@@ -1377,7 +1370,7 @@ const AppCreator = (props) => {
 			{actions.slice(0,actionAmount).map((data, index) => {
 				var error = data.errors.length > 0 ? 
 					<Tooltip color="primary" title={data.errors.join("\n")} placement="bottom">
-						<ErrorOutline />
+						<ErrorOutlineIcon />
 					</Tooltip>
 					:
 					<Tooltip color="secondary" title={data.errors.join("\n")} placement="bottom">
@@ -1401,7 +1394,7 @@ const AppCreator = (props) => {
 				const url = data.url
 				const hasFile = data["file_field"] !== undefined && data["file_field"] !== null && data["file_field"].length > 0
 				return (
-					<Paper style={actionListStyle}>
+					<Paper key={index} style={actionListStyle}>
 						{error} 
 					 	<Tooltip title="Edit action" placement="bottom">
 							<div style={{marginLeft: "5px", width: "100%", cursor: "pointer", maxWidth: 725, overflowX: "hidden",}} onClick={() => {
@@ -1559,6 +1552,11 @@ const AppCreator = (props) => {
 			actions[actionIndex] = currentAction
 		}
 
+
+		if (actions.length > actionAmount) { 
+			setActionAmount(actions.length)
+		}
+
 		setActions(actions)
 	}
 
@@ -1569,9 +1567,9 @@ const AppCreator = (props) => {
 		}
 
 		// Url verification
-		if (currentAction.url.length === 0) {
-			errormessage.push("URL path can't be empty.")
-		} else if (!currentAction.url.startsWith("/") && baseUrl.length > 0) {
+		//if (currentAction.url.length === 0) {
+		//	errormessage.push("URL path can't be empty.")
+		if (!currentAction.url.startsWith("/") && baseUrl.length > 0 && currentAction.url.length > 0) {
 			errormessage.push("URL must start with /")
 		}
 
@@ -1722,7 +1720,7 @@ const AppCreator = (props) => {
 			<FormControl style={{backgroundColor: surfaceColor, color: "white",}}>
 				<DialogTitle><div style={{color: "white"}}>New action</div></DialogTitle>
 				<DialogContent>
-					<Link target="_blank" to="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</Link>
+					<a target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</a>
 					<div style={{marginTop: "15px"}}/>
 					Name
 					<TextField
@@ -1800,8 +1798,8 @@ const AppCreator = (props) => {
 							</MenuItem>
 							)
 						})}
-						{actionBodyRequest.map(data => (
-							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						{actionBodyRequest.map((data, index)  => (
+							<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 								{data}
 							</MenuItem>
 						))}
@@ -1834,13 +1832,19 @@ const AppCreator = (props) => {
 						}}
 						onBlur={event => {
 							var parsedurl = event.target.value
+							console.log("URL: ", parsedurl)
+							if (parsedurl.includes("<") && parsedurl.includes(">")) {
+								console.log("REPLACE")
+								parsedurl = parsedurl.replaceAll("<", "{")
+								parsedurl = parsedurl.replaceAll(">", "}")
+							}
+
 							if (parsedurl.startsWith("PUT ") || parsedurl.startsWith("GET ") ||parsedurl.startsWith("POST ") || parsedurl.startsWith("DELETE ") ||parsedurl.startsWith("PATCH ") || parsedurl.startsWith("CONNECT ")) {
 								const tmp = parsedurl.split(" ")
 
 								if (tmp.length > 1) {
 									parsedurl = tmp[1]
 									setActionField("url", parsedurl)
-									setUrlPath(parsedurl)
 
 									setCurrentActionMethod(tmp[0].toUpperCase())
 									setActionField("method", tmp[0].toUpperCase())
@@ -1906,12 +1910,15 @@ const AppCreator = (props) => {
 										}
 
 										// Check URL query && headers 
-										setActionField("url", parsedurl)
-										setUrlPath(parsedurl)
+										//setActionField("url", parsedurl)
 									}
 								}
 							}
 
+							if (event.target.value !== parsedurl) {
+								setUrlPath(parsedurl)
+								setActionField("url", parsedurl)
+							}
 							//console.log("URL: ", request.url)
 						}}
 					/>
@@ -1932,7 +1939,7 @@ const AppCreator = (props) => {
 					{fileUploadEnabled ? 
 						<TextField
 							required
-							style={{backgroundColor: inputColor, display: "inline-block",}}
+							style={{backgroundColor: inputColor, display: "inline-block", marginLeft: 10, maxWidth: 210, marginTop: 7, }}
 							placeholder={"file"}
 							margin="normal"
 							variant="outlined"
@@ -1986,13 +1993,14 @@ const AppCreator = (props) => {
 	      <Button color="primary" variant="outlined" style={{borderRadius: "0px"}} onClick={() => {
 						//console.log(urlPathQueries)
 						//console.log(urlPath)
-						//console.log(currentAction)
+						console.log(currentAction)
 						const errors = getActionErrors()		
 						addActionToView(errors)
 						setActionsModalOpen(false)
 						setUrlPathQueries([]) 
 						setUrlPath("")
 						setFileUploadEnabled(false)
+
 					}}>
 						Submit	
 					</Button>
@@ -2000,31 +2008,22 @@ const AppCreator = (props) => {
 			</FormControl>
 		</Dialog>
 
+
+	const categories = [
+		"Communication",
+		"Cases",
+		"SIEM",
+		"Assets",
+		"Intel",
+		"IAM",
+		"Network",
+		"Eradication",
+		"Other",
+	]
+
 	const tagView = 
 		<div style={{color: "white"}}>
-			<h2>Tags</h2>
-			<ChipInput
-				style={{marginTop: 10}}
-				InputProps={{
-					style:{
-						color: "white",
-					},
-				}}
-				placeholder="Tags"
-				color="primary"
-				fullWidth
-				value={newWorkflowTags}
-				onAdd={(chip) => {
-					newWorkflowTags.push(chip)
-					setNewWorkflowTags(newWorkflowTags)
-					setUpdate("added"+chip)
-				}}
-				onDelete={(chip, index) => {
-					newWorkflowTags.splice(index, 1)
-					setNewWorkflowTags(newWorkflowTags)
-					setUpdate("delete "+chip)
-				}}
-			/>
+			{/*
 			<ChipInput
 				style={{marginTop: 10}}
 				InputProps={{
@@ -2047,13 +2046,74 @@ const AppCreator = (props) => {
 					setUpdate("delete "+chip)
 				}}
 			/>
+			*/}
+			<h4>Categories</h4>
+			<Select
+				fullWidth
+				SelectDisplayProps={{
+					style: {
+						marginLeft: 10,
+					}
+				}}
+				onChange={(e) => {
+					setNewWorkflowCategories([e.target.value])
+					setUpdate("added "+e.target.value)
+				}}
+				value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
+				style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+				>
+				{categories.map((data, index) => (
+					<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						{data}
+					</MenuItem>
+				))}
+			</Select>
+			<h4>Tags</h4>
+			<ChipInput
+				style={{marginTop: 10}}
+				InputProps={{
+					style:{
+						color: "white",
+					},
+				}}
+				placeholder="Tags"
+				color="primary"
+				fullWidth
+				value={newWorkflowTags}
+				onAdd={(chip) => {
+					newWorkflowTags.push(chip)
+					setNewWorkflowTags(newWorkflowTags)
+					setUpdate("added"+chip)
+				}}
+				onDelete={(chip, index) => {
+					newWorkflowTags.splice(index, 1)
+					setNewWorkflowTags(newWorkflowTags)
+					setUpdate("delete "+chip)
+				}}
+			/>
 		</div>
 
 	const actionView = 
-		<div style={{color: "white"}}>
-			<h2>Actions ({actions.length})</h2>
+		<div style={{color: "white", position: "relative",}}>
+			<div style={{position: "absolute", right: 0, top: 0,}}>
+				{actionAmount > 0 && actionAmount < actions.length ? 
+					<Button color="primary" style={{float: "right", borderRadius: 0, textAlign: "center"}} variant="outlined" onClick={() => {
+						setActionAmount(actions.length)
+						/*
+						if (actionAmount+increaseAmount > actions.length) {
+							setActionAmount(actions.length)
+						} else {
+							setActionAmount(actionAmount+increaseAmount)
+						}
+						*/
+					}}>
+						See all actions 
+					</Button>
+				: null}
+			</div>
+			<h2>Actions {actionAmount > 0 ? <span>({actionAmount} / {actions.length})</span> : null}</h2>
 			Actions are the tasks performed by an app. Read more about actions and apps
-			<Link target="_blank" to="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</Link>.
+			<a target="_blank" src="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</a>.
 			<div>
 				{loopActions}
 				<div style={{display: "flex"}}>
@@ -2073,17 +2133,9 @@ const AppCreator = (props) => {
 						setCurrentActionMethod(actionNonBodyRequest[0])
 						setActionsModalOpen(true)
 					}}>New action</Button> 				
-					{actionAmount > 0 && actionAmount < actions.length ? null :  
-						<Button color="primary" style={{marginTop: "20px", borderRadius: "0px", textAlign: "center"}} variant="outlined" onClick={() => {
-							if (actionAmount+increaseAmount > actions.length) {
-								setActionAmount(actions.length)
-							} else {
-								setActionAmount(actionAmount+increaseAmount)
-							}
-						}}>
-							See more actions	
-						</Button>
-					}
+					{/*
+						{actionAmount} {actions.length}
+					*/}
 				</div>
 			</div>
 		</div>
@@ -2153,11 +2205,15 @@ const AppCreator = (props) => {
 
 	const imageInfo = <img src={imageData} id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
 
-	const alternateImg = <AddPhotoAlternateIcon style={{ width: 100, height: 100, flex: "1", display: "flex", flexDirection: "row", margin: "auto" }}/>
+	const alternateImg = <AddPhotoAlternateIcon style={{ width: 100, height: 100, flex: "1", display: "flex", flexDirection: "row", margin: "auto", marginTop: 30, marginLeft: 40,}} onClick={() => {
+		upload.click()
+	}}/>
 	
 	const zoomIn = () => {
+		console.log("ZOOOMING IN")
 		setScale(scale+0.1);
 	}
+
 	const zoomOut = () => {
 		setScale(scale-0.1);
 	}
@@ -2264,19 +2320,28 @@ const AppCreator = (props) => {
 						</h2>
 					</Link>
 					<h2>
-						{name}
+						{name} {actions === null || actions === undefined || actions.length === 0 ? null : <span>({actions.length})</span>}
 					</h2>
 				</Breadcrumbs>
 				{imageUploadModalView}
+				<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 				<Paper style={boxStyle}>
 					<h2 style={{marginBottom: "10px", color: "white"}}>General information</h2>
 					<a target="_blank" href="https://shuffler.io/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</a>
 					<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
 					 	<Tooltip title="Click to edit the app's image" placement="bottom">
-							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {setOpenImageModal(true)}}>
-								<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
+							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {
+									/*
+									if (fileBase64.length === 0) {
+										upload.click()
+									}
+									*/
+
+									setOpenImageModal(true)
+								}}>
 								{!imageData && (alternateImg)}
 								{imageInfo}
+								<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 							</div>
 						</Tooltip>
 						<div style={{flex: "3", color: "white",}}>
@@ -2400,8 +2465,8 @@ const AppCreator = (props) => {
 							value={authenticationOption}
 							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 							>
-							{authenticationOptions.map(data => (
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+							{authenticationOptions.map((data, index) => (
+								<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 									{data}
 								</MenuItem>
 							))}
@@ -2439,7 +2504,9 @@ const AppCreator = (props) => {
 					}}>
 						{appBuilding ? <CircularProgress /> : "Save"}
 					</Button>
-					{errorCode.length > 0 ? `Error: ${errorCode}` : null}
+					<Typography style={{marginTop: 5}}>
+						{errorCode.length > 0 ? `Error: ${errorCode}` : null}
+					</Typography>
 				</Paper>
 		</div>
 
